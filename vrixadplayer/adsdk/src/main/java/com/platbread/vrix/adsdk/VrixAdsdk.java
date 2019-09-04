@@ -24,7 +24,7 @@ import java.io.IOException;
 
 public class VrixAdsdk extends FrameLayout {
     private Context mContext;
-    private String loadURI = "http://devgp.vrixon.com/vadpm/vadpm.html?pform=android&d_gom=1&d_ad=1"; // Default SBTV page URI
+    private String loadURI = "http://devgp.vrixon.com/vadpm/vadpm.html?pform=android";// &d_gom=1&d_ad=1"; //Default SBTV page URI
     private WebView vrixWebview;
     private VrixBridge mBridge;
     private JSONObject adOptions;
