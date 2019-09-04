@@ -2,6 +2,7 @@ package com.platbread.vrix.adsdk;
 
 import android.app.Activity;
 import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.util.Log;
 import android.webkit.CookieManager;
@@ -11,22 +12,39 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-
+import android.widget.Toast;
+import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import org.json.JSONException;
 import org.json.JSONObject;
+import java.io.IOException;
+
 
 
 public class VrixAdsdk extends FrameLayout {
     private Context mContext;
-
-    private String loadURI = "http://devgp.vrixon.com/vadpm/vadpm.html?pform=android"; // Default SBTV page URI
+    private String loadURI = "http://devgp.vrixon.com/vadpm/vadpm.html?pform=android";// &d_gom=1&d_ad=1"; //Default SBTV page URI
     private WebView vrixWebview;
-
     private VrixBridge mBridge;
     private JSONObject adOptions;
-
     private VrixADPLayoutListener mVrixADPLayoutListener;
+    private GadidInfo gadidInfo;
+    private GoogleAdIdTask googleAdIdTask;
 
+
+    /**
+     * Vrix Ad sdk version
+     * @return
+     */
+    private String getVersion(){
+        return com.platbread.vrix.adsdk.BuildConfig.VERSION_NAME;
+    }
+
+
+    /**
+     * SDK interface
+     */
     public interface VrixADPLayoutListener{
         public void onAdPlaying();
         public void onAdComplete();
@@ -34,15 +52,58 @@ public class VrixAdsdk extends FrameLayout {
         public void onError(String msg);
     }
 
+
+    /********************************************************************
+     * 생성자
+     * @param context
+     * @param opt
+     ********************************************************************/
     public VrixAdsdk(Context context, JSONObject opt){
         super(context);
         mContext = context;
         adOptions = opt;
-        init();
+        googleAdIdTask = new GoogleAdIdTask();
+
+        initVrixWebview();
     }
 
-    public void init(){
-        Log.d("VRIX","init::"+mContext);
+
+
+    /********************************************************
+     * 외부에 제공되는 메서드
+     ********************************************************/
+    /**
+     * 외부 메서드 : 광고 재생 요청
+     */
+    public void play(){
+        Log.d("VRIX",">> VrixAdsdk.play() ------------");
+        if(vrixWebview != null) {
+            // 실행할때 마다 GoogleAdIdTask 실행해서  AAID, AAID_STATUS 갱신후 실행
+            googleAdIdTask.execute();
+        }else{
+            Toast.makeText(mContext,"did'nt init google ads service",Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * 외부 메서드 : interface 를 통해 이벤트를 수신하기 위한 Listener 등록 메서드
+     * @param listener
+     */
+    public void addEventListener(VrixADPLayoutListener listener){
+        mVrixADPLayoutListener = listener;
+    }
+
+
+
+
+    /********************************************************
+     * 내부 메서드
+     ********************************************************/
+    /**
+     * VrixWebview 초기화
+     */
+    private void initVrixWebview(){
+        Log.d("VRIX",">> initVrixWebview() ------------");
 
         mBridge = new VrixBridge();
         LayoutParams vparams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
@@ -53,17 +114,34 @@ public class VrixAdsdk extends FrameLayout {
         vrixWebview.addJavascriptInterface(mBridge, "VrixBridge");
         vrixWebview.getSettings().setMediaPlaybackRequiresUserGesture(false);
         vrixWebview.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        String userAgent = vrixWebview.getSettings().getUserAgentString();
+        String sdkVersion = getVersion();
+
+        // Agent 값 추가
+        vrixWebview.getSettings().setUserAgentString(userAgent+" VRIX_SDK_Android/"+sdkVersion);
         this.addView(vrixWebview);
     }
 
-    public void play(){
-        vrixWebview.loadUrl(loadURI);
+    /**
+     * GoogleAdIdTask 가 완료된후 vrixWebview 에 실질적으로 URI 로드 요청하는 부분
+     */
+    private void loadWebView(){
+        Log.d("VRIX",">> loadWebView() ------------");
+        String reqURI = loadURI + "?AAID=" + gadidInfo.AAID + "&AAID_STATUS=" + gadidInfo.AAID_STATUS;
+        vrixWebview.loadUrl(reqURI);
     }
 
-    public void addEventListener(VrixADPLayoutListener listener){
-        mVrixADPLayoutListener = listener;
-    }
 
+
+
+    /********************************************************
+     * CLASS 선언
+     ********************************************************/
+
+    /**
+     * vrixWebview의 javascript 와 통신하기위한 Bridge (JavascriptInterface)
+     */
     protected final class VrixBridge {
 
         public VrixBridge() {
@@ -75,6 +153,7 @@ public class VrixAdsdk extends FrameLayout {
          */
         @JavascriptInterface
         public void onReady() {
+            Log.d("VRIX","[JavascriptInterface] onReady() ------------");
             ((Activity)mContext).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -103,6 +182,7 @@ public class VrixAdsdk extends FrameLayout {
          */
         @JavascriptInterface
         public void onStateChange(final String arg) {
+            Log.d("VRIX","[JavascriptInterface] onStateChange() ------------ arg="+arg);
             ((Activity)mContext).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -126,22 +206,6 @@ public class VrixAdsdk extends FrameLayout {
                             if(mVrixADPLayoutListener != null){
                                 mVrixADPLayoutListener.onAdComplete();
                             }
-/*
-                            JSONObject jsonObject = new JSONObject();
-
-                            try {
-                                jsonObject.put("status", "RELOAD");
-
-
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-
-                            StringBuilder sendObj = new StringBuilder();
-                            sendObj.append(jsonObject);
-
-                            vrixWebview.loadUrl("javascript:onStateChange("+sendObj+")");*/
                             break;
                         default:
                             break;
@@ -150,12 +214,14 @@ public class VrixAdsdk extends FrameLayout {
             });
         }
 
+
         /**
          * Error event
          * @param msg
          */
         @JavascriptInterface
         public void onError(final String msg){
+            Log.d("VRIX","[JavascriptInterface] onError() ------------ msg="+msg);
             ((Activity)mContext).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -167,7 +233,6 @@ public class VrixAdsdk extends FrameLayout {
         }
 
     }
-
 
 
     /**
@@ -193,4 +258,75 @@ public class VrixAdsdk extends FrameLayout {
             vrixWebview.invalidate();
         }
     }
+
+
+    /**
+     * Google play services ads : adid, status 획득
+     */
+    private class GoogleAdIdTask extends AsyncTask<Void, Void, String> {
+        protected String doInBackground(final Void... params) {
+            String adId = null;
+            Boolean aaid_status = false;
+            try {
+                adId = AdvertisingIdClient.getAdvertisingIdInfo(mContext).getId();
+                aaid_status = AdvertisingIdClient.getAdvertisingIdInfo(mContext).isLimitAdTrackingEnabled();
+                Log.d("VRIX","adid = " + adId);
+            } catch (IllegalStateException ex) {
+                ex.printStackTrace();
+                Log.d("VRIX","IllegalStateException");
+            } catch (GooglePlayServicesRepairableException ex) {
+                ex.printStackTrace();
+                Log.d("VRIX","GooglePlayServicesRepairableException");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                Log.d("VRIX","IOException");
+            } catch (GooglePlayServicesNotAvailableException ex) {
+                ex.printStackTrace();
+                Log.d("VRIX","GooglePlayServicesNotAvailableException");
+            }
+
+            gadidInfo = new GadidInfo();
+            gadidInfo.setAAID(adId);
+            gadidInfo.setAAID_STATUS(aaid_status ? "N":"Y");
+
+            return adId;
+        }
+
+        protected void onPostExecute(String adId) {
+            //Ad ID를 리턴받은 이후에 이용한 작업 수행
+            Log.d("VRIX","gadidInfo.AAID  = " + gadidInfo.AAID );
+            Log.d("VRIX","gadidInfo.AAID_STATUS  = " + gadidInfo.AAID_STATUS );
+
+            loadWebView();
+        }
+    }
+
+    /**
+     * Google ADID Info Class
+     */
+    private class GadidInfo{
+        private String AAID;
+        private String AAID_STATUS;
+
+        public GadidInfo(){
+            super();
+        }
+
+        public String getAAID() {
+            return AAID;
+        }
+
+        public void setAAID(String AAID) {
+            this.AAID = AAID;
+        }
+
+        public String getAAID_STATUS() {
+            return AAID_STATUS;
+        }
+
+        public void setAAID_STATUS(String AAID_STATUS) {
+            this.AAID_STATUS = AAID_STATUS;
+        }
+    }
+
 }
