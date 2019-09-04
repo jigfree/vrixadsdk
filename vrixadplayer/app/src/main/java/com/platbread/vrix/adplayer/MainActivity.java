@@ -2,8 +2,8 @@ package com.platbread.vrix.adplayer;
 
 import android.content.Context;
 import android.media.MediaPlayer;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -12,7 +12,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.VideoView;
-
 import com.platbread.vrix.adsdk.VrixAdsdk;
 
 import org.json.JSONException;
@@ -32,7 +31,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mContex = this;
-
 
         /**
          * start button
@@ -90,9 +88,7 @@ public class MainActivity extends AppCompatActivity {
         JSONObject adOptions = new JSONObject();
 
         try {
-           // vadp.setVisibility(View.VISIBLE);
-
-            adOptions.put("adTag", "https://devads.vrixon.com/vast/vast.vrix?invenid=KHLOC");
+            adOptions.put("adTag", "http://devads.vrixon.com/vast/vast.vrix?invenid=KHLOC");
             adOptions.put("autostart",true);
 
             vrixAdsdk = new VrixAdsdk(this,adOptions);
