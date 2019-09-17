@@ -33,3 +33,7 @@ dependencies {
 
     implementation 'com.google.android.gms:play-services-ads:18.1.1'
 }
+
+apply plugin: 'com.github.dcendents.android-maven'
+group = 'com.github.jigfree'
+version = '1.0.0'
