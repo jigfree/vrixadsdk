@@ -2,6 +2,7 @@ package com.platbread.vrix.adsdk;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.util.Log;
@@ -62,8 +63,6 @@ public class VrixAdsdk extends FrameLayout {
         super(context);
         mContext = context;
         adOptions = opt;
-        googleAdIdTask = new GoogleAdIdTask();
-
         initVrixWebview();
     }
 
@@ -79,6 +78,8 @@ public class VrixAdsdk extends FrameLayout {
         Log.d("VRIX",">> VrixAdsdk.play() ------------");
         if(vrixWebview != null) {
             // 실행할때 마다 GoogleAdIdTask 실행해서  AAID, AAID_STATUS 갱신후 실행
+            if(googleAdIdTask != null)googleAdIdTask.cancel(true);
+            googleAdIdTask = new GoogleAdIdTask();
             googleAdIdTask.execute();
         }else{
             Toast.makeText(mContext,"did'nt init google ads service",Toast.LENGTH_SHORT).show();
@@ -106,9 +107,8 @@ public class VrixAdsdk extends FrameLayout {
         Log.d("VRIX",">> initVrixWebview() ------------");
 
         mBridge = new VrixBridge();
-        LayoutParams vparams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-
         vrixWebview = new WebView(this.getContext());
+        vrixWebview.setBackgroundColor(Color.BLACK);
         vrixWebview.getSettings().setJavaScriptEnabled(true); // 자바스크립트 사용을 허용한다.
         vrixWebview.setWebViewClient(new WebViewClientClass());  // 새로운 창을 띄우지 않고 내부에서 웹뷰를 실행시킨다.
         vrixWebview.addJavascriptInterface(mBridge, "VrixBridge");
@@ -128,7 +128,8 @@ public class VrixAdsdk extends FrameLayout {
      */
     private void loadWebView(){
         Log.d("VRIX",">> loadWebView() ------------");
-        String reqURI = loadURI + "?AAID=" + gadidInfo.AAID + "&AAID_STATUS=" + gadidInfo.AAID_STATUS;
+        String reqURI = loadURI + "&AAID=" + gadidInfo.AAID + "&AAID_STATUS=" + gadidInfo.AAID_STATUS;
+        vrixWebview.loadUrl("about:blank");
         vrixWebview.loadUrl(reqURI);
     }
 
@@ -182,7 +183,7 @@ public class VrixAdsdk extends FrameLayout {
          */
         @JavascriptInterface
         public void onStateChange(final String arg) {
-            Log.d("VRIX","[JavascriptInterface] onStateChange() ------------ arg="+arg);
+            if(!arg.equals("AD_LINEAR_TIMEUPDATE"))Log.d("VRIX","[JavascriptInterface] onStateChange() ------------ arg="+arg);
             ((Activity)mContext).runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -250,6 +251,7 @@ public class VrixAdsdk extends FrameLayout {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
+            vrixWebview.setBackgroundColor(Color.BLACK);
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 CookieSyncManager.getInstance().sync();
             } else {

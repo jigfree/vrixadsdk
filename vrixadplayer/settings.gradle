@@ -1,2 +1,2 @@
 include ':app', ':adsdk'
-rootProject.name = 'artifact'
+rootProject.name = 'vrixadsdk'
