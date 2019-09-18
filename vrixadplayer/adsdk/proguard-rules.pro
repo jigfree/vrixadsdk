@@ -20,6 +20,4 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--keepclassmembers class com.platbread.vrix.adsdk {
-    public *;
-}
+-keep public class com.platbread.vrix.adsdk.** { *; }
