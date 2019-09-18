@@ -20,4 +20,19 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
+
+
+#-dontobfuscate #없애면 난독화 X
+#-dontoptimize #없애면 최적화 X
+#-keepresourcexmlattributenames manifest/** #없애면 manifest 난독화 X
+
+-dontshrink # 사용하지 않는 메소드 유지
+-keepparameternames
+-dontwarn android.support.v4.**,org.slf4j.**,com.google.android.gms.**
+-dontskipnonpubliclibraryclasses
+
+
+-renamesourcefileattribute SourceFile
+
+-keep interface com.platbread.vrix.adsdk.** { *; }
 -keep public class com.platbread.vrix.adsdk.** { *; }
