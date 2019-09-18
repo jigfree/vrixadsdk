@@ -12,7 +12,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.VideoView;
-import com.platbread.vrix.adsdk.VrixAdsdk;
+
 
 import org.json.JSONException;
 import org.json.JSONObject;
