@@ -25,5 +25,5 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
 
     //implementation project(path: ':adsdk')
-    implementation 'com.github.jigfree:vrixadsdk:0.0.10'
+    implementation 'com.github.jigfree:vrixadsdk:0.0.11'
 }
